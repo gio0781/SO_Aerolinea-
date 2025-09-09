@@ -1,0 +1,397 @@
+document.addEventListener('DOMContentLoaded', () => {
+
+    // --- DATABASE SIMULATION ---
+    const db = {
+        users: [
+            { id: 1, email: 'usuario@aeromundo.com', password: 'password123' }
+        ],
+        flights: [
+            { id: 'AM101', origin: 'Ciudad de México', destination: 'Cancún', departure: '08:00', arrival: '10:15', duration: '2h 15m', price: 2500 },
+            { id: 'AM204', origin: 'Monterrey', destination: 'Tijuana', departure: '12:30', arrival: '13:45', duration: '2h 15m', price: 3200 },
+            { id: 'AM530', origin: 'Guadalajara', destination: 'Los Ángeles', departure: '15:00', arrival: '16:30', duration: '3h 30m', price: 4500 },
+            { id: 'AM102', origin: 'Ciudad de México', destination: 'Cancún', departure: '14:00', arrival: '16:15', duration: '2h 15m', price: 2850 },
+            { id: 'AM801', origin: 'Bogotá', destination: 'Ciudad de México', departure: '06:00', arrival: '10:30', duration: '4h 30m', price: 6200 },
+        ],
+        // Seats are stored per flight ID.
+        seatStatus: {
+            'AM101': { '2A': 'occupied', '3C': 'occupied' },
+            'AM204': { '1A': 'occupied' },
+            'AM530': {},
+            'AM102': { '5F': 'occupied', '6A': 'occupied' },
+            'AM801': {}
+        },
+        bookings: [
+            { bookingId: 'BK001', userId: 1, flightId: 'AM204', seat: '1A', hasBaggage: true, totalPaid: 3200 + 800 },
+        ],
+        BAGGAGE_PRICE: 800,
+    };
+
+    // --- APPLICATION STATE ---
+    let state = {
+        currentUser: null, // {id, email}
+        currentSelection: { // Data for the flight being booked
+            flight: null,
+            seat: null,
+            hasBaggage: false,
+            totalPrice: 0,
+        }
+    };
+
+    // --- DOM SELECTORS ---
+    const views = {
+        login: document.getElementById('login-view'),
+        flights: document.getElementById('flights-view'),
+        seatSelection: document.getElementById('seat-selection-view'),
+        payment: document.getElementById('payment-view'),
+        myFlights: document.getElementById('my-flights-view'),
+        confirmation: document.getElementById('confirmation-view')
+    };
+    
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
+    const navLinks = document.getElementById('nav-links');
+    const userEmailDisplay = document.getElementById('user-email-display');
+    const logoutButton = document.getElementById('logout-button');
+    const flightListContainer = document.getElementById('flight-list-container');
+    const backToFlightsBtn = document.getElementById('back-to-flights-btn');
+    const seatMapContainer = document.getElementById('seat-map');
+    const addBaggageCheckbox = document.getElementById('add-baggage-checkbox');
+    const proceedToPaymentBtn = document.getElementById('proceed-to-payment-btn');
+    const searchFlightBtn = document.getElementById('search-flight-btn');
+    const myFlightsLink = document.getElementById('my-flights-link');
+    const flightsLink = document.getElementById('flights-link');
+    const confirmPaymentBtn = document.getElementById('confirm-payment-btn');
+    const viewMyFlightsBtn = document.getElementById('view-my-flights-btn');
+
+    // --- RENDER FUNCTIONS ---
+
+    /** Shows a view and hides the others */
+    function showView(viewName) {
+        Object.values(views).forEach(view => view.classList.add('hidden'));
+        if (views[viewName]) {
+            views[viewName].classList.remove('hidden');
+        }
+    }
+    
+    /** Updates the UI based on authentication status */
+    function updateAuthUI() {
+        if (state.currentUser) {
+            navLinks.style.display = 'flex';
+            userEmailDisplay.textContent = state.currentUser.email;
+            showView('flights');
+            renderFlights(db.flights);
+        } else {
+            navLinks.style.display = 'none';
+            showView('login');
+        }
+    }
+    
+    /** Renders the list of flights */
+    function renderFlights(flightsToRender) {
+        flightListContainer.innerHTML = '';
+        if (flightsToRender.length === 0) {
+             flightListContainer.innerHTML = `<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-lg" role="alert">
+                <p class="font-bold">Sin resultados</p>
+                <p>No se encontraron vuelos para tu búsqueda. Intenta con otros destinos.</p>
+            </div>`;
+            return;
+        }
+        flightsToRender.forEach(flight => {
+            const flightCard = `
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105">
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-5 items-center gap-4">
+                            <div class="md:col-span-3">
+                                <div class="flex items-center space-x-4">
+                                    <div class="text-center">
+                                        <p class="text-2xl font-bold">${flight.departure}</p>
+                                        <p class="text-sm font-medium text-gray-600">${flight.origin}</p>
+                                    </div>
+                                    <div class="flex-grow text-center">
+                                        <p class="text-sm text-gray-500">${flight.duration}</p>
+                                        <div class="w-full bg-gray-200 rounded-full h-1 my-1">
+                                            <div class="bg-purple-600 h-1 rounded-full" style="width: 100%"></div>
+                                        </div>
+                                        <p class="text-xs text-gray-500">Vuelo Directo</p>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="text-2xl font-bold">${flight.arrival}</p>
+                                        <p class="text-sm font-medium text-gray-600">${flight.destination}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="md:col-span-2 text-center md:text-right border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-4">
+                                <p class="text-sm text-gray-500">Precio por pasajero</p>
+                                <p class="text-3xl font-bold text-purple-700">$${flight.price.toLocaleString()}</p>
+                                <button class="select-flight-btn mt-2 w-full md:w-auto bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg" data-flight-id="${flight.id}">
+                                    Seleccionar Vuelo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            flightListContainer.innerHTML += flightCard;
+        });
+    }
+    
+    /** Renders the seat map for a specific flight */
+    function renderSeatMap(flightId) {
+        seatMapContainer.innerHTML = '';
+        const occupiedSeats = db.seatStatus[flightId] || {};
+        const rows = 10;
+        const cols = ['A', 'B', 'C', '', 'D', 'E', 'F'];
+
+        for (let i = 1; i <= rows; i++) {
+            cols.forEach(col => {
+                if (col === '') {
+                    const aisle = document.createElement('div');
+                    aisle.textContent = i;
+                    aisle.className = "flex items-center justify-center text-sm font-medium text-gray-500";
+                    seatMapContainer.appendChild(aisle);
+                } else {
+                    const seatId = `${i}${col}`;
+                    const seatEl = document.createElement('div');
+                    seatEl.classList.add('seat');
+                    seatEl.dataset.seatId = seatId;
+                    seatEl.textContent = seatId;
+                    
+                    if (occupiedSeats[seatId] === 'occupied') {
+                        seatEl.classList.add('occupied');
+                    } else {
+                        seatEl.classList.add('available');
+                    }
+                    seatMapContainer.appendChild(seatEl);
+                }
+            });
+        }
+    }
+    
+    /** Updates the purchase summary on the seat selection page */
+    function updateSummary() {
+        const flight = state.currentSelection.flight;
+        if (!flight) return;
+
+        const seatPrice = state.currentSelection.seat ? 0 : 0; // Seat is free in this model
+        const baggagePrice = state.currentSelection.hasBaggage ? db.BAGGAGE_PRICE : 0;
+        const totalPrice = flight.price + seatPrice + baggagePrice;
+        state.currentSelection.totalPrice = totalPrice;
+
+        document.getElementById('summary-flight-price').textContent = `$${flight.price.toLocaleString()}`;
+        document.getElementById('baggage-price-display').textContent = `$${db.BAGGAGE_PRICE.toLocaleString()}`;
+        document.getElementById('summary-seat-price').textContent = state.currentSelection.seat ? `Asiento ${state.currentSelection.seat}` : 'Selecciona uno';
+        document.getElementById('summary-total-price').textContent = `$${totalPrice.toLocaleString()}`;
+        
+        proceedToPaymentBtn.disabled = !state.currentSelection.seat;
+    }
+
+    /** Renders the payment view */
+    function renderPaymentView() {
+        const { flight, seat, hasBaggage, totalPrice } = state.currentSelection;
+        document.getElementById('payment-flight-details').innerHTML = `
+            <p><strong>De:</strong> ${flight.origin} <strong>a</strong> ${flight.destination}</p>
+            <p><strong>Fecha:</strong> 25 Diciembre 2024</p>
+            <p><strong>Asiento:</strong> ${seat}</p>
+        `;
+        document.getElementById('payment-passenger-name').textContent = state.currentUser.email;
+        document.getElementById('payment-summary-details').innerHTML = `
+            <div class="flex justify-between"><p>Tarifa Vuelo:</p> <p>$${flight.price.toLocaleString()}</p></div>
+            <div class="flex justify-between"><p>Equipaje Documentado:</p> <p>$${hasBaggage ? db.BAGGAGE_PRICE.toLocaleString() : '0.00'}</p></div>
+            <div class="flex justify-between font-bold mt-2 text-lg"><p>Total:</p> <p>$${totalPrice.toLocaleString()}</p></div>
+        `;
+        showView('payment');
+    }
+
+    /** Renders the list of user's booked flights */
+    function renderMyFlights() {
+        const bookedFlightsContainer = document.getElementById('booked-flights-container');
+        bookedFlightsContainer.innerHTML = '';
+        const userBookings = db.bookings.filter(b => b.userId === state.currentUser.id);
+
+        if (userBookings.length === 0) {
+             bookedFlightsContainer.innerHTML = `<div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-lg" role="alert">
+                <p class="font-bold">Aún no tienes vuelos</p>
+                <p>¡Tu próxima aventura te espera! Busca un vuelo para comenzar.</p>
+            </div>`;
+            return;
+        }
+
+        userBookings.forEach(booking => {
+            const flight = db.flights.find(f => f.id === booking.flightId);
+            const card = `
+            <div class="bg-white p-6 rounded-xl shadow-md">
+               <div class="flex justify-between items-start">
+                    <div>
+                         <p class="text-sm text-gray-500">Código de reservación</p>
+                         <p class="font-bold text-lg text-purple-700">${booking.bookingId}</p>
+                    </div>
+                    <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Confirmado</span>
+               </div>
+               <div class="border-t my-4"></div>
+               <p class="font-semibold text-xl">${flight.origin} <i class="fa-solid fa-plane mx-2 text-gray-400"></i> ${flight.destination}</p>
+               <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
+                    <div><p class="text-gray-500">Salida</p><p class="font-medium">${flight.departure}</p></div>
+                    <div><p class="text-gray-500">Llegada</p><p class="font-medium">${flight.arrival}</p></div>
+                    <div><p class="text-gray-500">Asiento</p><p class="font-medium">${booking.seat}</p></div>
+                    <div><p class="text-gray-500">Total Pagado</p><p class="font-medium">$${booking.totalPaid.toLocaleString()}</p></div>
+               </div>
+            </div>
+            `;
+            bookedFlightsContainer.innerHTML += card;
+        });
+    }
+    
+    // --- EVENT HANDLERS ---
+    
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const user = db.users.find(u => u.email === email && u.password === password);
+        
+        if (user) {
+            state.currentUser = { id: user.id, email: user.email };
+            loginError.classList.add('hidden');
+            updateAuthUI();
+        } else {
+            loginError.textContent = 'Correo o contraseña incorrectos.';
+            loginError.classList.remove('hidden');
+        }
+    });
+    
+    logoutButton.addEventListener('click', () => {
+        state.currentUser = null;
+        updateAuthUI();
+    });
+
+    flightListContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('select-flight-btn')) {
+            const flightId = e.target.dataset.flightId;
+            const selectedFlight = db.flights.find(f => f.id === flightId);
+            state.currentSelection.flight = selectedFlight;
+            
+            // Render flight summary on seat page
+            document.getElementById('flight-summary-seat').innerHTML = `
+                <p class="font-bold text-xl">${selectedFlight.origin} <i class="fa-solid fa-arrow-right-long text-sm mx-2"></i> ${selectedFlight.destination}</p>
+                <p class="text-sm text-gray-500">${selectedFlight.departure} - ${selectedFlight.arrival} (${selectedFlight.duration})</p>
+            `;
+            
+            renderSeatMap(flightId);
+            updateSummary();
+            showView('seatSelection');
+        }
+    });
+    
+    backToFlightsBtn.addEventListener('click', () => showView('flights'));
+
+    seatMapContainer.addEventListener('click', (e) => {
+        const seatEl = e.target.closest('.seat');
+        if (!seatEl || seatEl.classList.contains('occupied')) return;
+        
+        // Deselect previous seat if it exists
+        const previouslySelected = seatMapContainer.querySelector('.selected');
+        if (previouslySelected) {
+            previouslySelected.classList.remove('selected');
+            previouslySelected.classList.add('available');
+        }
+        
+        // If clicking the same seat, deselect it
+        if (previouslySelected === seatEl) {
+            state.currentSelection.seat = null;
+        } else {
+            seatEl.classList.remove('available');
+            seatEl.classList.add('selected');
+            state.currentSelection.seat = seatEl.dataset.seatId;
+        }
+        updateSummary();
+    });
+
+    addBaggageCheckbox.addEventListener('change', (e) => {
+        state.currentSelection.hasBaggage = e.target.checked;
+        updateSummary();
+    });
+    
+    proceedToPaymentBtn.addEventListener('click', () => {
+         renderPaymentView();
+    });
+
+    confirmPaymentBtn.addEventListener('click', () => {
+        const paymentError = document.getElementById('payment-error');
+        
+        // Card validation simulation
+        const cardName = document.getElementById('card-name').value;
+        const cardNumber = document.getElementById('card-number').value;
+        const cardExpiry = document.getElementById('card-expiry').value;
+        const cardCvv = document.getElementById('card-cvv').value;
+
+        if (!cardName || !cardNumber || !cardExpiry || !cardCvv) {
+            paymentError.textContent = 'Por favor, completa todos los campos de pago.';
+            paymentError.classList.remove('hidden');
+            return;
+        }
+        paymentError.classList.add('hidden');
+
+        // 1. Create new booking
+        const newBooking = {
+            bookingId: `BK${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
+            userId: state.currentUser.id,
+            flightId: state.currentSelection.flight.id,
+            seat: state.currentSelection.seat,
+            hasBaggage: state.currentSelection.hasBaggage,
+            totalPaid: state.currentSelection.totalPrice
+        };
+        db.bookings.push(newBooking);
+
+        // 2. Update the seat status to 'occupied' in the "database"
+        if (!db.seatStatus[newBooking.flightId]) {
+            db.seatStatus[newBooking.flightId] = {};
+        }
+        db.seatStatus[newBooking.flightId][newBooking.seat] = 'occupied';
+
+        // 3. Show confirmation
+        document.getElementById('confirmation-details').innerHTML = `
+            <p><strong>Reservación:</strong> ${newBooking.bookingId}</p>
+            <p><strong>Vuelo:</strong> ${state.currentSelection.flight.origin} a ${state.currentSelection.flight.destination}</p>
+            <p><strong>Asiento:</strong> ${newBooking.seat}</p>
+            <p><strong>Total:</strong> $${newBooking.totalPaid.toLocaleString()}</p>
+        `;
+        showView('confirmation');
+        
+        // 4. Reset selection state
+        state.currentSelection = { flight: null, seat: null, hasBaggage: false, totalPrice: 0 };
+    });
+
+    searchFlightBtn.addEventListener('click', () => {
+        const origin = document.getElementById('search-origin').value.trim().toLowerCase();
+        const destination = document.getElementById('search-destination').value.trim().toLowerCase();
+
+        const filteredFlights = db.flights.filter(flight => {
+            const matchOrigin = !origin || flight.origin.toLowerCase().includes(origin);
+            const matchDestination = !destination || flight.destination.toLowerCase().includes(destination);
+            return matchOrigin && matchDestination;
+        });
+
+        renderFlights(filteredFlights);
+    });
+
+    myFlightsLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        renderMyFlights();
+        showView('myFlights');
+    });
+
+    flightsLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        renderFlights(db.flights); // Show all flights again
+        showView('flights');
+    });
+    
+    viewMyFlightsBtn.addEventListener('click', () => {
+         renderMyFlights();
+         showView('myFlights');
+    });
+
+
+    // --- APP INITIALIZATION ---
+    updateAuthUI();
+});
