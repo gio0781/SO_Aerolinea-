@@ -4,23 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AeroMundo - Tu Puerta al Cielo</title>
-    <!-- Tailwind CSS for modern and responsive design -->
+    <!-- Tailwind CSS para un diseño moderno y responsivo -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome Icons for better UI -->
+    <!-- Iconos de Font Awesome para una mejor UI -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Custom Stylesheet -->
+    <!-- Hoja de Estilos Personalizada -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="text-gray-800">
 
-    <!-- Main application container -->
+    <!-- Contenedor principal de la aplicación -->
     <div id="app-container" class="min-h-screen">
 
-        <!-- Navigation Bar -->
+        <!-- Barra de Navegación -->
         <header class="bg-white shadow-md sticky top-0 z-50">
             <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
                 <a href="#" class="text-2xl font-bold text-purple-600 flex items-center">
@@ -40,11 +40,41 @@
 
         <main class="container mx-auto p-4 md:p-8">
 
-            <!-- SCENARIO 1.1: LOGIN & REGISTRATION -->
+            <!-- ESCENARIO 1.0: REGISTRO DE USUARIO -->
+            <div id="register-view" class="hidden">
+                <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden md:max-w-2xl p-8">
+                    <h1 class="text-3xl font-bold text-center mb-2 text-gray-800">Crea tu Cuenta</h1>
+                    <p class="text-center text-gray-500 mb-8">Únete a AeroMundo y vuela a donde quieras.</p>
+                    <form id="register-form">
+                        <div class="mb-4">
+                            <label for="register-email" class="block text-gray-700 text-sm font-bold mb-2">Correo Electrónico</label>
+                            <input type="email" id="register-email" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="tu@correo.com" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="register-password" class="block text-gray-700 text-sm font-bold mb-2">Contraseña</label>
+                            <input type="password" id="register-password" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Mínimo 6 caracteres" required>
+                        </div>
+                        <div class="mb-6">
+                            <label for="register-confirm-password" class="block text-gray-700 text-sm font-bold mb-2">Confirmar Contraseña</label>
+                            <input type="password" id="register-confirm-password" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Repite tu contraseña" required>
+                        </div>
+                        <p id="register-error" class="text-red-500 text-xs italic mb-4 hidden"></p>
+                        <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:shadow-outline transition duration-300">
+                            Registrarse
+                        </button>
+                        <p class="text-center text-sm text-gray-500 mt-6">
+                            ¿Ya tienes una cuenta? <a href="#" id="back-to-login-link" class="font-bold text-purple-600 hover:underline">Inicia sesión</a>.
+                        </p>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ESCENARIO 1.1: LOGIN -->
             <div id="login-view">
                 <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden md:max-w-2xl p-8">
                     <h1 class="text-3xl font-bold text-center mb-2 text-gray-800">Bienvenido a AeroMundo</h1>
                     <p class="text-center text-gray-500 mb-8">Inicia sesión para encontrar tu próximo destino.</p>
+                    <p id="login-success" class="text-green-600 bg-green-100 p-3 rounded-lg text-center mb-4 hidden"></p>
                     <form id="login-form">
                         <div class="mb-4">
                             <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Correo Electrónico</label>
@@ -59,14 +89,14 @@
                             Iniciar Sesión
                         </button>
                         <p class="text-center text-sm text-gray-500 mt-6">
-                            ¿No tienes cuenta? <a href="#" class="font-bold text-purple-600 hover:underline">Regístrate aquí</a>.
+                            ¿No tienes cuenta? <a href="#" id="show-register-link" class="font-bold text-purple-600 hover:underline">Regístrate aquí</a>.
                             <br><span class="text-xs">(Usa usuario@aeromundo.com y password123 para demo)</span>
                         </p>
                     </form>
                 </div>
             </div>
 
-            <!-- SCENARIO 1.2: FLIGHTS LIST -->
+            <!-- ESCENARIO 1.2: LISTA DE VUELOS -->
             <div id="flights-view" class="hidden">
                 <h1 class="text-3xl font-bold mb-6">Vuelos Disponibles</h1>
                 <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
@@ -86,15 +116,15 @@
                 </div>
 
                 <div id="flight-list-container" class="space-y-4">
-                    <!-- Flights will be dynamically inserted here -->
+                    <!-- Los vuelos se insertarán aquí dinámicamente -->
                 </div>
             </div>
 
-            <!-- SCENARIO 2: SEAT & BAGGAGE SELECTION -->
+            <!-- ESCENARIO 2: SELECCIÓN DE ASIENTO Y EQUIPAJE -->
             <div id="seat-selection-view" class="hidden">
                 <button id="back-to-flights-btn" class="mb-4 text-purple-600 hover:underline font-medium"><i class="fa-solid fa-arrow-left mr-2"></i>Volver a Vuelos</button>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <!-- Seat map column -->
+                    <!-- Columna del mapa de asientos -->
                     <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
                         <h2 class="text-2xl font-bold mb-4">Selecciona tu Asiento</h2>
                         <div class="flex justify-center space-x-4 mb-6 text-sm">
@@ -104,16 +134,16 @@
                         </div>
                         <div class="bg-gray-100 p-4 rounded-lg">
                             <div id="seat-map" class="grid grid-cols-7 gap-2 justify-center mx-auto max-w-sm">
-                                <!-- Seats generated by JS -->
+                                <!-- Asientos generados por JS -->
                             </div>
                         </div>
                     </div>
 
-                    <!-- Summary and payment column -->
+                    <!-- Columna de resumen y pago -->
                     <div class="bg-white p-6 rounded-xl shadow-lg h-fit">
                         <h2 class="text-2xl font-bold mb-4">Resumen de tu Viaje</h2>
                         <div id="flight-summary-seat" class="mb-4 border-b pb-4">
-                            <!-- Flight summary inserted by JS -->
+                            <!-- Resumen del vuelo insertado por JS -->
                         </div>
                         <div class="mb-4">
                             <h3 class="font-semibold text-lg mb-2">Servicios Adicionales</h3>
@@ -149,7 +179,7 @@
                 </div>
             </div>
             
-            <!-- SCENARIO 3: PAYMENT & CONFIRMATION -->
+            <!-- ESCENARIO 3: PAGO Y CONFIRMACIÓN -->
             <div id="payment-view" class="hidden">
                  <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8">
                      <h1 class="text-3xl font-bold text-center mb-6">Confirmación y Pago</h1>
@@ -165,8 +195,8 @@
                         <h2 class="text-xl font-semibold mb-2">Resumen de Cargo</h2>
                         <div id="payment-summary-details"></div>
                      </div>
-                     
-                     <!-- Credit Card Form -->
+
+                     <!-- Formulario de Tarjeta de Crédito -->
                      <div class="border-b pb-6 mb-6">
                         <h2 class="text-xl font-semibold mb-4">Información de Pago</h2>
                         <div class="space-y-4">
@@ -201,22 +231,22 @@
                  </div>
             </div>
 
-            <!-- SCENARIO 4: USER'S FLIGHTS -->
+            <!-- ESCENARIO 4: VUELOS DEL USUARIO -->
             <div id="my-flights-view" class="hidden">
                  <h1 class="text-3xl font-bold mb-6">Mis Vuelos Reservados</h1>
                  <div id="booked-flights-container" class="space-y-4">
-                    <!-- Booked flights are inserted here -->
+                    <!-- Vuelos reservados se insertan aquí -->
                  </div>
             </div>
 
-             <!-- FINAL CONFIRMATION SCREEN -->
+             <!-- PANTALLA DE CONFIRMACIÓN FINAL -->
             <div id="confirmation-view" class="hidden text-center">
                 <div class="max-w-lg mx-auto bg-white rounded-xl shadow-lg p-8">
                     <i class="fa-solid fa-circle-check text-6xl text-green-500 mb-4"></i>
                     <h1 class="text-3xl font-bold mb-2">¡Pago Exitoso!</h1>
                     <p class="text-gray-600 mb-6">Tu reservación ha sido confirmada. Hemos enviado los detalles a tu correo.</p>
                     <div id="confirmation-details" class="text-left bg-gray-50 p-4 rounded-lg mb-6">
-                        <!-- Confirmation details -->
+                        <!-- Detalles de confirmación -->
                     </div>
                     <button id="view-my-flights-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg">
                         Ver todos mis vuelos
@@ -224,11 +254,13 @@
                 </div>
             </div>
 
+
         </main>
 
     </div>
 
-    <!-- Custom Logic Script -->
+    <!-- Script de Lógica Personalizada -->
     <script src="script.js"></script>
 </body>
 </html>
+
